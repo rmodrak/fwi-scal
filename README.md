@@ -59,7 +59,8 @@ Because these are noise tomography examples, event locations in `SOURCE` (2D) an
 ---------
 
 *homogeneous*
-- same as 2D homogeneous examle above
+- homogeneous
+- isotropic elastic
 
 
 *coarse* 

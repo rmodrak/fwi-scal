@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+import json
+import numpy as np
+
+from os.path import join
+from scipy.interpolate import griddata
+
+HOME = '/users/rmodrak'
+
+
+def gauss2(X,Y,mux,muy,sigmax,sigmay):
+
+     v = np.exp(-(((X-mux)**2./(2.*sigmax**2.) + (Y-muy)**2./(2.*sigmay**2.))))
+     v /= abs(values).max()
+
+     return np.ones(v.shape) + 0.1*v
+     
+
+    
+
+
+if __name__=='__main__':
+    """ Writes SCAL models
+    """
+    filename = "scal.json"
+    with open(filename, "r") as file:
+       coords  = json.load(file)
+    print(coords)
+
+
+    for key,val in coords.items():
+        print('populating %s' % key)
+        globals()[key] = val
+
+    nx = ny = 400
+    nz = 100
+
+
+    #
+    # define lateral variations
+    #
+
+    x = np.linspace(xmin, xmax, nx)
+    y = np.linspace(ymin, ymax, ny)
+
+    X,Y = np.meshgrid(x,y)
+    values_xy = np.ones((nx,ny))
+
+    # centers of Gaussian perturbations
+    nc = 8
+    mux = np.linspace(xmin, xmax, 2*(nc+1))[1:-1:2]
+    muy = np.linspace(ymin, ymax, 2*(nc+1))[1:-1:2]
+
+    sigmax = (xmax-xmin)/(3.*nc)
+    sigmay = (ymax-ymin)/(3.*nc)
+
+    sign = 1
+    for _i in range(nc):
+        
+        sign0 = sign
+        if sign==sign0:
+            sign *= -1
+
+        for _j in range(nc):
+
+            values_xy *= gauss2(X,Y,mux[_i],muy[_j],sigmax,sigmay)**sign
+
+            sign *= -1.
+
+    if True:
+        from matplotlib import pyplot
+        pyplot.tricontourf(X.flatten(), Y.flatten(), values.flatten())
+        pyplot.savefig('checkers_fine_xy.png')
+
+
+    #
+    # add depth dependence
+    #
+
+    z = np.linspace(zmin, zmax, nz)
+
+    # value between 0 and 1
+    z_scale = np.exp(-0.5*(z[iz] - 333.)**2/(333.)**2)
+    z_scale /= z_scale.max()
+
+    values_xyz = np.zeros(nx,ny,nz)
+
+    if iz in range(nz):
+        np.exp(-0.5*(z[iz] - 333.)**2/(333.)**2)
+        values_xyz[:,:,iz] = values_xy * scale_z[iz]
+
+

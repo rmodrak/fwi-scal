@@ -1,0 +1,177 @@
+#!/usr/bin/env python
+
+import json
+import numpy as np
+
+from os.path import join
+from scipy.interpolate import griddata
+
+HOME = '/users/rmodrak'
+
+def fullpath(path):
+    return join(HOME, path)
+
+
+def write_header(filename, xmin,ymin,zmin,xmax,ymax,zmax,nx,ny,nz,
+    vpmin,vpmax,vsmin,vsmax,rhomin,rhomax):
+
+    with open(filename, 'w') as file:
+        file.write('%e %e %e %e %e %e\n' % (xmin,ymin,zmin,xmax,ymax,zmax))
+        file.write('%e %e %e\n' % ((xmax-xmin)/(nx-1), (ymax-ymin)/(ny-1), (zmax-zmin)/(nz-1)))
+        file.write('%d %d %d\n' % (nx,ny,nz))
+        file.write('%.0f %.0f %.0f %.0f %.0f %.0f\n' % (vpmin,vpmax,vsmin,vsmax,rhomin,rhomax))
+
+
+def _write(filename, array):
+    """ Writes Fortran style binary files--data are written as single precision
+        floating point numbers
+    """
+    header = footer = np.array([4*len(array)], dtype='int32')
+    array = np.array(array, dtype='float32')
+
+    with open(filename, 'wb') as file:
+        header.tofile(file)
+        array.tofile(file)
+        footer.tofile(file)
+
+
+def rescale(x,xmin,xmax,y,ymin,ymax):
+
+    x -= x.min()
+    x *= (xmax-xmin)/x.max()
+    x += xmin
+
+    y -= y.min()
+    y *= (ymax-ymin)/y.max()
+    y += ymin
+
+    return x,y
+
+
+def write_fortran(dirname, tofile):
+
+    names = [
+        'x',
+        'z',
+        'rho',
+        'vp',
+        'vs',
+    ]
+
+    for _i in range(5):
+        filename = join(dirname, 'proc000000_%s.bin' % names[_i])
+        _write(filename, tofile[:, _i])
+
+
+if __name__=="__main__":
+    """ Writes SCAL models
+    """
+    filename = "scal.json"
+    with open(filename, "r") as file:
+       coords  = json.load(file)
+    print(coords)
+
+
+    for key,val in coords.items():
+        print('populating %s' % key)
+        globals()[key] = val
+
+
+    #
+    # write 2D model_init
+    #
+    print('')
+    print('Writing 2D model_init')
+    print('')
+
+    filename = fullpath('data/examples-2d/checkers/model_init_ascii')
+    fromfile = np.loadtxt(filename)
+
+    x = fromfile[:,0]
+    y = fromfile[:,1]
+
+    tofile = fromfile
+    tofile[:,0], tofile[:,1] = rescale(
+        x, coords['xmin'], coords['xmax'],
+        y, coords['ymin'], coords['ymax'])
+
+    filename = fullpath('devel/scal/2d/specfem2d-d745c542/model_init_ascii')
+    np.savetxt(filename, tofile)
+
+    dirname = fullpath('devel/scal/2d/specfem2d-d745c542/model_init/')
+    write_fortran(dirname, tofile)
+
+
+    #
+    # write 2D coarse checkerboard model
+    #
+    print('')
+    print('Writing 2D model_true')
+    print('')
+
+    filename = fullpath('data/examples-2d/checkers/model_true_ascii')
+    fromfile = np.loadtxt(filename)
+
+    x = fromfile[:,0]
+    y = fromfile[:,1]
+
+    tofile = fromfile
+    tofile[:,0], tofile[:,1] = rescale(
+        x, coords['xmin'], coords['xmax'],
+        y, coords['ymin'], coords['ymax'])
+
+    filename = fullpath('devel/scal/2d/specfem2d-d745c542/model_true_ascii')
+    np.savetxt(filename, tofile)
+
+    dirname = fullpath('devel/scal/2d/specfem2d-d745c542/model_true/')
+    write_fortran(dirname, tofile)
+
+
+    #
+    # write 3D coarse checkerboard model
+    #
+    print('')
+    print('Writing 3D model checkers_coarse_xyz')
+    print('')
+
+    filename = fullpath('data/examples-2d/checkers/model_true_ascii')
+    fromfile = np.loadtxt(filename)
+
+    xgll = fromfile[:,0]
+    ygll = fromfile[:,1]
+    vgll = fromfile[:,4]
+
+    nx = ny = 200
+    nz = 50
+
+    x = np.linspace(xmin, xmax, nx)
+    y = np.linspace(ymin, ymax, ny)
+    z = np.linspace(zmin, zmax, nz)
+
+    X,Y,Z = np.meshgrid(x,y,z)
+
+    X = X.flatten()
+    Y = Y.flatten()
+    Z = Z.flatten()
+
+    VS = griddata((xgll,ygll), vgll,
+                  (X,Y), 'linear')
+
+    VP = np.sqrt(3.)*VS
+    RHO = np.tile(2600., nx*ny*nz)
+
+    minmax = [VP.min(), VP.max(), VS.min(), VS.max(), RHO.min(), RHO.max()]
+    
+
+    filename = fullpath('devel/scal/3d/simple-coordinate-system/checkers_coarse_xyz/model_noheader')
+    np.savetxt(filename, np.column_stack((X,Y,Z,VP,VS,RHO)), fmt='%.2e %.2e %.2e %.0f %.0f %.0f')
+
+
+    filename = fullpath('devel/scal/3d/simple-coordinate-system/checkers_coarse_xyz/header')
+    write_header(filename, xmin,ymin,zmin,xmax,ymax,zmax,nx,ny,nz, *minmax)
+
+
+    print('')
+    print('Writing 3D model checkers_coarse_xyz')
+    print('')
+

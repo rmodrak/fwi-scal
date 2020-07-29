@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+
+import json
+import numpy as np
+
+from matplotlib import pyplot
+
+
+if __name__=='__main__':
+    filename = "scal.json"
+    with open(filename, "r") as file:
+        coords  = json.load(file)
+
+    for key,val in coords.items():
+        print('populating %s' % key)
+        globals()[key] = val
+
+    to_xy = lambda lat,lon: (
+        (lon-LON0)*(xmax-xmin)/(LON1-LON0)+xmin,
+        (lat-LAT0)*(ymax-ymin)/(LAT1-LAT0)+xmin,
+        )
+
+    filename = 'stalist.txt'
+    with open(filename, 'r') as file:
+        input = file.readlines()
+
+    nn = len(input)
+
+
+
+    #
+    # write STATIONS file
+    #
+
+    lat, lon = [], []
+    output = []
+
+    for line in input:
+        parts = line.split(' ')
+        codes = parts[0].split('.')
+        net, sta, loc = codes
+        lat += [float(parts[1])]
+        lon += [float(parts[2])]
+        x, y = to_xy(lat[-1], lon[-1])
+        output += ['%s %s %10.5f %10.5f 0.0 0.0\n' % (sta, net, x, y)]
+
+
+    filename = 'STATIONS_xy'
+    with open(filename, 'w') as file:
+        file.writelines(output)
+
+    lat, lon = [], []
+    output = []
+
+    for line in input:
+        parts = line.split(' ')
+        codes = parts[0].split('.')
+        net, sta, loc = codes
+        lat += [float(parts[1])]
+        lon += [float(parts[2])]
+        output += ['%s %s %10.5f %10.5f 0.0 0.0\n' % (sta, net, lat[-1], lon[-1])]
+
+    filename = 'STATIONS_latlon'
+    with open(filename, 'w') as file:
+        file.writelines(output)
+
+
+
+    lat = np.array(lat)
+    lon = np.array(lon)
+    print()
+    print('lat min,max: %10.5f,  %10.5f' % (lat.min(), lat.max()))
+    print('lon min,max: %10.5f,  %10.5f' % (lon.min(), lon.max()))
+    print()
+
+
+    #
+    # write 2D SOURCE files
+    #
+
+
+    for _i in range(nn):
+        x, y = to_xy(lat[_i], lon[_i])
+
+        lines = []
+        lines += ['source_surf = .false.']
+        lines += ['xs = %10.5f' % x]
+        lines += ['zs = %10.5f' % y]
+        lines += ['source_type = 1']
+        lines += ['time_function_type = 1']
+        lines += ['f0 = 0.10']
+        lines += ['tshift = 0.0']
+        lines += ['anglesource = 0.0']
+        lines += ['Mxx = 1.0']
+        lines += ['Mzz = 1.0']
+        lines += ['Mxz = 0.0']
+        lines += ['factor = 10000000000.0']
+
+        filename = 'SOURCE_%06d' % _i
+        with open(filename, 'w') as file:
+            file.write('\n'.join(lines))
+
+
+    #
+    # write 3D SOURCE files
+    #
+
+    for _i in range(nn):
+        x, y = to_xy(lat[_i], lon[_i])
+
+        lines = []
+        lines += ['FORCE %d' % _i]
+        lines += ['time shift:  0.0000']
+        lines += ['f0:          0.1']
+        #lines += ['latorUTM:    %.5f' % lat[_i]]
+        #lines += ['longorUTM:   %.5f' % lon[_i]]
+        lines += ['latorUTM:    %.5f' % x]
+        lines += ['longorUTM:   %.5f' % y]
+        lines += ['depth:       0.']
+        lines += ['factor force source:             1.d15']
+        lines += ['component dir vect source E:     0.d0']
+        lines += ['component dir vect source N:     0.d0']
+        lines += ['component dir vect source Z_UP: -1.d0']
+
+        filename = 'FORCESOLUTION_%06d' % _i
+        with open(filename, 'w') as file:
+            file.write('\n'.join(lines))
+

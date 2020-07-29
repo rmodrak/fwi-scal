@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+
+import sys
+import glob
+import json
+import numpy as np
+import obspy
+
+from obspy.geodetics import gps2dist_azimuth
+from obspy.geodetics import kilometers2degrees as km_to_deg
+
+coords = dict()
+
+
+
+def padding(lon0, lon1, lat0, lat1):
+
+    length_X_in_m, _, _ = gps2dist_azimuth(
+        lat0, lon0,
+        lat0, lon1)
+
+    length_Y_in_m, _, _ = gps2dist_azimuth(
+        lat0, lon0,
+        lat1, lon0)
+
+
+    padding_in_m = (length_X_in_m - length_Y_in_m)/2.
+    padding_in_deg = padding_in_m*(lat1-lat0)/length_Y_in_m
+
+    return padding_in_deg
+
+
+# study area
+LON0 = -118.64971 - 0.3
+LON1 = -117.60906 + 0.3
+LAT0 = 33.55259
+LAT1 = 34.28196
+
+padding_in_deg = padding(LON0, LON1, LAT0, LAT1)
+LAT0 -= padding_in_deg
+LAT1 += padding_in_deg
+
+
+
+if __name__=="__main__":
+    """ Writes lon,lat,depth increments
+    """
+    if len(sys.argv)-1 != 1:
+        print("USAGE: write_mesh_info PERIOD_IN_S")
+        sys.exit(-1)
+    period_in_s = float(sys.argv[1])
+    freq = 1./period_in_s
+
+    length_X_in_m, _, _ = gps2dist_azimuth(
+        LAT0, LON0,
+        LAT0, LON1)
+
+    length_Y_in_m, _, _ = gps2dist_azimuth(
+        LAT0, LON0,
+        LAT1, LON0)
+
+    xmin = 0.
+    xmax = xmin + length_X_in_m
+    ymin = 0.
+    ymax = xmin + length_Y_in_m
+
+    depth_in_m = 50000.
+    zmin = 0.
+    zmax = zmin - depth_in_m
+
+
+    # what spacing between elements is required?
+    minvs = 3000. # m/s
+    spacing_in_m = minvs/(26.667*freq)
+
+    dx = spacing_in_m
+    dz = spacing_in_m
+
+    # how many grid points are required?
+    nx = length_X_in_m/spacing_in_m
+    ny = length_Y_in_m/spacing_in_m
+    nz = depth_in_m/spacing_in_m
+
+    # how many spectral elements are required?
+    ngll_per_element = 5
+    nex = length_X_in_m/(ngll_per_element*spacing_in_m)
+    ney = length_Y_in_m/(ngll_per_element*spacing_in_m)
+    nez = depth_in_m/(ngll_per_element*spacing_in_m)
+
+    # PML padding
+    nepad = 0
+    xpad = 0.#float(nepad)*(x1-x0)/int(neh)
+
+    print('')
+
+    print('')
+    print('lat min,max:  %10.5f,  %10.5f' % (LAT0, LAT1))
+    print('lon min,max:  %10.5f,  %10.5f' % (LON0, LON1))
+    print('')
+
+    print('')
+    print('Length X (km): %.3f' % (length_X_in_m/1000.))
+    print('Length Y (km): %.3f' % (length_Y_in_m/1000.))
+    print('Depth (km): %.3f' % (depth_in_m/1000.))
+    print('')
+
+    print('')
+    print('Dominant frequency (Hz): %.2f' % freq)
+    print('Grid spacing (m): %.3f' % spacing_in_m)
+    print('Number of grid points X: %d' % (nex*ngll_per_element))
+    print('Number of grid points Y: %d' % (ney*ngll_per_element))
+    print('Number of grid points Z: %d' % (nez*ngll_per_element))
+    print('')
+
+    print('')
+    print('Number of spectral elements X, (ngll=%d): %d' % (ngll_per_element, nex))
+    print('Number of spectral elements Y, (ngll=%d): %d' % (ngll_per_element, ney))
+    print('Number of spectral elements, vertical (ngll=%d): %d' % (ngll_per_element, nez))
+    print('')
+
+    print('')
+
+
+    jsondict = {}
+    for var in ('LAT0','LAT1', 'LON0','LON1','xmin','xmax','ymin','ymax','zmin','zmax'):
+        jsondict[var] = float(globals()[var])
+
+    filename = "scal_%ds.json" % (period_in_s)
+    with open(filename, "w") as file:
+       json.dump(jsondict, file)
+

@@ -1,0 +1,10 @@
+FORCE 25
+time shift:  0.0000
+f0:          0.1
+latorUTM:    110093.24539
+longorUTM:   48086.28073
+depth:       0.
+factor force source:             1.d15
+component dir vect source E:     0.d0
+component dir vect source N:     0.d0
+component dir vect source Z_UP: -1.d0

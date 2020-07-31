@@ -9,7 +9,7 @@ from scipy.interpolate import griddata
 HOME = '/users/rmodrak'
 
 def fullpath(path):
-    return join(HOME, path)
+    return join(HOME, 'devel', 'scal', path)
 
 
 def write_header(filename, xmin,ymin,zmin,xmax,ymax,zmax,nx,ny,nz,
@@ -19,7 +19,7 @@ def write_header(filename, xmin,ymin,zmin,xmax,ymax,zmax,nx,ny,nz,
         file.write('%e %e %e %e %e %e\n' % (xmin,ymin,zmin,xmax,ymax,zmax))
         file.write('%e %e %e\n' % ((xmax-xmin)/(nx-1), (ymax-ymin)/(ny-1), (zmax-zmin)/(nz-1)))
         file.write('%d %d %d\n' % (nx,ny,nz))
-        file.write('%.0f %.0f %.0f %.0f %.0f %.0f\n' % (vpmin,vpmax,vsmin,vsmax,rhomin,rhomax))
+        file.write('%.2e %.2e %.2e %.0f %.0f %.0f\n' % (vpmin,vpmax,vsmin,vsmax,rhomin,rhomax))
 
 
 def _write(filename, array):
@@ -78,13 +78,13 @@ if __name__=="__main__":
 
 
     #
-    # write 2D model_init
+    # write 2D homogeneous model
     #
     print('')
-    print('Writing 2D model_init')
+    print('Writing 2D homogeneous model')
     print('')
 
-    filename = fullpath('data/examples-2d/checkers/model_init_ascii')
+    filename = '/users/rmodrak/data/examples-2d/checkers/model_init_ascii'
     fromfile = np.loadtxt(filename)
 
     x = fromfile[:,0]
@@ -92,13 +92,13 @@ if __name__=="__main__":
 
     tofile = fromfile
     tofile[:,0], tofile[:,1] = rescale(
-        x, coords['xmin'], coords['xmax'],
-        y, coords['ymin'], coords['ymax'])
+        x, xmin, xmax,
+        y, ymin, ymax)
 
-    filename = fullpath('devel/scal/2d/specfem2d-d745c542/model_init_ascii')
+    filename = fullpath('2d/simple-coordinate-system/specfem2d-d745c542/model_homogeneous_ascii')
     np.savetxt(filename, tofile)
 
-    dirname = fullpath('devel/scal/2d/specfem2d-d745c542/model_init/')
+    dirname = fullpath('2d/simple-coordinate-system/specfem2d-d745c542/model_homogeneous/')
     write_fortran(dirname, tofile)
 
 
@@ -106,10 +106,10 @@ if __name__=="__main__":
     # write 2D coarse checkerboard model
     #
     print('')
-    print('Writing 2D model_true')
+    print('Writing 2D coarse checkerboard')
     print('')
 
-    filename = fullpath('data/examples-2d/checkers/model_true_ascii')
+    filename = '/users/rmodrak/data/examples-2d/checkers/model_true_ascii'
     fromfile = np.loadtxt(filename)
 
     x = fromfile[:,0]
@@ -117,13 +117,13 @@ if __name__=="__main__":
 
     tofile = fromfile
     tofile[:,0], tofile[:,1] = rescale(
-        x, coords['xmin'], coords['xmax'],
-        y, coords['ymin'], coords['ymax'])
+        x, xmin, xmax,
+        y, ymin, ymax)
 
-    filename = fullpath('devel/scal/2d/specfem2d-d745c542/model_true_ascii')
+    filename = fullpath('2d/simple-coordinate-system/specfem2d-d745c542/model_coarse_ascii')
     np.savetxt(filename, tofile)
 
-    dirname = fullpath('devel/scal/2d/specfem2d-d745c542/model_true/')
+    dirname = fullpath('2d/simple-coordinate-system/specfem2d-d745c542/model_coarse/')
     write_fortran(dirname, tofile)
 
 
@@ -131,31 +131,36 @@ if __name__=="__main__":
     # write 3D coarse checkerboard model
     #
     print('')
-    print('Writing 3D model checkers_coarse_xyz')
+    print('Writing 3D coarse checkerboard')
     print('')
 
-    filename = fullpath('data/examples-2d/checkers/model_true_ascii')
+    filename = '/users/rmodrak/data/examples-2d/checkers/model_true_ascii'
     fromfile = np.loadtxt(filename)
 
     xgll = fromfile[:,0]
     ygll = fromfile[:,1]
     vgll = fromfile[:,4]
 
-    nx = ny = 200
-    nz = 50
+    xgll, ygll = rescale(
+        xgll, xmin, xmax,
+        ygll, ymin, ymax)
+
+    nx = ny = 75
+    nz = 10
 
     x = np.linspace(xmin, xmax, nx)
     y = np.linspace(ymin, ymax, ny)
     z = np.linspace(zmin, zmax, nz)
 
-    X,Y,Z = np.meshgrid(x,y,z)
+    # this ordering results in Z slow, y fast, x, fastest
+    Y,Z,X = np.meshgrid(y,z,x)
 
     X = X.flatten()
     Y = Y.flatten()
     Z = Z.flatten()
 
     VS = griddata((xgll,ygll), vgll,
-                  (X,Y), 'linear')
+                  (X,Y), 'nearest')
 
     VP = np.sqrt(3.)*VS
     RHO = np.tile(2600., nx*ny*nz)
@@ -163,15 +168,18 @@ if __name__=="__main__":
     minmax = [VP.min(), VP.max(), VS.min(), VS.max(), RHO.min(), RHO.max()]
     
 
-    filename = fullpath('devel/scal/3d/simple-coordinate-system/checkers_coarse_xyz/model_noheader')
+    filename = fullpath('3d/simple-coordinate-system/models_xyz/coarse/model_noheader')
     np.savetxt(filename, np.column_stack((X,Y,Z,VP,VS,RHO)), fmt='%.2e %.2e %.2e %.0f %.0f %.0f')
 
 
-    filename = fullpath('devel/scal/3d/simple-coordinate-system/checkers_coarse_xyz/header')
+    filename = fullpath('3d/simple-coordinate-system/models_xyz/coarse/header')
     write_header(filename, xmin,ymin,zmin,xmax,ymax,zmax,nx,ny,nz, *minmax)
 
 
-    print('')
-    print('Writing 3D model checkers_coarse_xyz')
-    print('')
+    print('To finish writing SPECFEM3D models, adjust min/max values in header, then:\n\n'
+          'MODELDIR="%s"; cat $MODELDIR/header $MODELDIR/model_noheader > $MODELDIR/tomography_model.xyz\n' % fullpath('3d/simple-coordinate-system/models_xyz/coarse'))
+
+    #print('')
+    #print('Writing 3D model fine')
+    #print('')
 

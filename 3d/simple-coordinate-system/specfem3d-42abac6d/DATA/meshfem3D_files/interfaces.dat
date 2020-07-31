@@ -8,7 +8,7 @@
 #
 # interface number 1 
 # SUPPRESS_UTM_PROJECTION  NXI  NETA LONG_MIN       LAT_MIN          SPACING_XI  SPACING_ETA
- .true.                    2    2    -118.94971d0   33.23048d0       1.37359d0  1.64065d0
+ .true.                    2    2    0.d0           0.d0             152359.55004705998d0 152359.55004705998d0
  topo.dat
 #
 # for each layer, we give the number of spectral elements in the vertical direction

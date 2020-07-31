@@ -65,7 +65,7 @@ Because these are noise tomography examples, event locations in `SOURCE` (2D) an
 
 *coarse* 
 - same pattern of positive and negative Gaussian variations as 2D example 
-- 1D depth profile based on Kanamori 1977
+- 1D depth profile based on Hudley & Kanamori 1977
 - +10/-10 percent variations across all depths
 - constant VP/VS = sqrt(3)
 - isotropic elastic

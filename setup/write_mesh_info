@@ -64,9 +64,9 @@ if __name__=="__main__":
     ymin = 0.
     ymax = xmin + length_Y_in_m
 
-    depth_in_m = 50000.
-    zmin = 0.
-    zmax = zmin - depth_in_m
+    depth_in_m = 20000.
+    zmin = -depth_in_m
+    zmax = 0.
 
 
     # what spacing between elements is required?
@@ -125,7 +125,7 @@ if __name__=="__main__":
     for var in ('LAT0','LAT1', 'LON0','LON1','xmin','xmax','ymin','ymax','zmin','zmax'):
         jsondict[var] = float(globals()[var])
 
-    filename = "scal_%ds.json" % (period_in_s)
+    filename = "scal.json"
     with open(filename, "w") as file:
        json.dump(jsondict, file)
 
